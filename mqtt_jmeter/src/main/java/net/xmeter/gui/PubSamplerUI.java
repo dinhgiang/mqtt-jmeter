@@ -1,13 +1,13 @@
 package net.xmeter.gui;
 
 import java.awt.BorderLayout;
+import java.awt.event.ActionEvent;
 import java.util.logging.Logger;
 
-import javax.swing.BorderFactory;
-import javax.swing.JCheckBox;
-import javax.swing.JPanel;
+import javax.swing.*;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
+import javax.swing.filechooser.FileNameExtensionFilter;
 
 import org.apache.jmeter.gui.util.HorizontalPanel;
 import org.apache.jmeter.gui.util.JSyntaxTextArea;
@@ -28,12 +28,15 @@ public class PubSamplerUI extends AbstractSamplerGui implements Constants, Chang
 	private JLabeledChoice qosChoice;
 	private final JLabeledTextField retainedMsg = new JLabeledTextField("Retained messages:", 1);
 	private final JLabeledTextField topicName = new JLabeledTextField("Topic name:");
-	private JCheckBox timestamp = new JCheckBox("Add timestamp in payload");
+	private final JCheckBox timestamp = new JCheckBox("Add timestamp in payload");
 
 	private JLabeledChoice messageTypes;
 	private final JSyntaxTextArea sendMessage = JSyntaxTextArea.getInstance(10, 50);
 	private final JTextScrollPane messagePanel = JTextScrollPane.getInstance(sendMessage);
-	private JLabeledTextField stringLength = new JLabeledTextField("Length:");
+	private final JLabeledTextField stringLength = new JLabeledTextField("Length:");
+	private final JButton chooseFile = new JButton("Choose file");
+	private final JLabel filePath = new JLabel();
+	private final JFileChooser chooserFile = new JFileChooser();
 
 	public PubSamplerUI() {
 		init();
@@ -74,7 +77,7 @@ public class PubSamplerUI extends AbstractSamplerGui implements Constants, Chang
 		optsPanelCon.setBorder(BorderFactory.createTitledBorder(BorderFactory.createEtchedBorder(), "Payloads"));
 		
 		JPanel horizon1 = new HorizontalPanel();
-		messageTypes = new JLabeledChoice("Message type:", new String[] { MESSAGE_TYPE_STRING, MESSAGE_TYPE_HEX_STRING, MESSAGE_TYPE_RANDOM_STR_WITH_FIX_LEN }, false, false);
+		messageTypes = new JLabeledChoice("Message type:", new String[] { MESSAGE_TYPE_STRING, MESSAGE_TYPE_HEX_STRING, MESSAGE_TYPE_RANDOM_STR_WITH_FIX_LEN, MESSAGE_TYPE_FILE }, false, false);
 		messageTypes.addChangeListener(this);
 		messageTypes.setSelectedIndex(0);
 		
@@ -85,9 +88,17 @@ public class PubSamplerUI extends AbstractSamplerGui implements Constants, Chang
 		JPanel horizon2 = new VerticalPanel();
 		messagePanel.setVisible(false);
 		horizon2.add(messagePanel);
-		
+
+		JPanel horizon3 = new HorizontalPanel();
+		chooseFile.addActionListener(this::pressChooseFileButton);
+		chooseFile.setVisible(false);
+		filePath.setVisible(false);
+		horizon3.add(chooseFile);
+		horizon3.add(filePath);
+
 		optsPanelCon.add(horizon1);
 		optsPanelCon.add(horizon2);
+		optsPanelCon.add(horizon3);
 		return optsPanelCon;
 	}
 
@@ -103,9 +114,18 @@ public class PubSamplerUI extends AbstractSamplerGui implements Constants, Chang
 			if(selectedIndex == 0 || selectedIndex == 1) {
 				stringLength.setVisible(false);
 				messagePanel.setVisible(true);
+				chooseFile.setVisible(false);
+				filePath.setVisible(false);
 			} else if(selectedIndex == 2) {
 				messagePanel.setVisible(false);
 				stringLength.setVisible(true);
+				chooseFile.setVisible(false);
+				filePath.setVisible(false);
+			} else if (selectedIndex == 3) {
+				messagePanel.setVisible(false);
+				stringLength.setVisible(false);
+				chooseFile.setVisible(true);
+				filePath.setVisible(true);
 			} else {
 				logger.info("Unknown message type.");
 			}
@@ -129,7 +149,7 @@ public class PubSamplerUI extends AbstractSamplerGui implements Constants, Chang
 		super.configure(element);
 		PubSampler sampler = (PubSampler) element;
 		
-		if(sampler.getQOS().trim().indexOf(JMETER_VARIABLE_PREFIX) == -1){
+		if(!sampler.getQOS().trim().contains(JMETER_VARIABLE_PREFIX)){
 			this.qosChoice.setSelectedIndex(Integer.parseInt(sampler.getQOS()));	
 		} else {
 			this.qosChoice.setText(sampler.getQOS());
@@ -145,6 +165,8 @@ public class PubSamplerUI extends AbstractSamplerGui implements Constants, Chang
 			this.messageTypes.setSelectedIndex(1);
 		} else if(MESSAGE_TYPE_RANDOM_STR_WITH_FIX_LEN.equalsIgnoreCase(sampler.getMessageType())) {
 			this.messageTypes.setSelectedIndex(2);
+		} else if(MESSAGE_TYPE_FILE.equalsIgnoreCase(sampler.getMessageType())) {
+			this.messageTypes.setSelectedIndex(3);
 		}
 		
 		stringLength.setText(String.valueOf(sampler.getMessageLength()));
@@ -161,8 +183,8 @@ public class PubSamplerUI extends AbstractSamplerGui implements Constants, Chang
 		this.configureTestElement(sampler);
 		sampler.setTopic(this.topicName.getText());
 		
-		if(this.qosChoice.getText().indexOf(JMETER_VARIABLE_PREFIX) == -1) {
-			int qos = QOS_0;
+		if (!this.qosChoice.getText().contains(JMETER_VARIABLE_PREFIX)) {
+			int qos;
 			try {
 				qos = Integer.parseInt(this.qosChoice.getText());
 				if (qos < QOS_0 || qos > QOS_2) {
@@ -182,7 +204,16 @@ public class PubSamplerUI extends AbstractSamplerGui implements Constants, Chang
 		sampler.setMessageType(this.messageTypes.getText());
 		sampler.setMessageLength(this.stringLength.getText());
 		sampler.setMessage(this.sendMessage.getText());
+		sampler.setFilePath(this.filePath.getText());
 		sampler.setRetainedMessage(Boolean.parseBoolean(this.retainedMsg.getText()));
+	}
+
+	private void pressChooseFileButton(ActionEvent e) {
+		chooserFile.setFileFilter(new FileNameExtensionFilter("Text file", "txt"));
+		int returnVal = chooserFile.showOpenDialog(null);
+		if(returnVal == JFileChooser.APPROVE_OPTION) {
+			filePath.setText(chooserFile.getSelectedFile().getAbsolutePath());
+		}
 	}
 
 	@Override
@@ -193,7 +224,7 @@ public class PubSamplerUI extends AbstractSamplerGui implements Constants, Chang
 		this.timestamp.setSelected(false);
 		
 		this.messageTypes.setSelectedIndex(0);
-		this.stringLength.setText(String.valueOf(DEFAULT_MESSAGE_FIX_LENGTH));
+		this.stringLength.setText(DEFAULT_MESSAGE_FIX_LENGTH);
 		this.sendMessage.setText("");
 	}
 }
