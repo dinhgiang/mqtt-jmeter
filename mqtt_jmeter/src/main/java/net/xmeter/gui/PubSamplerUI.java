@@ -209,7 +209,7 @@ public class PubSamplerUI extends AbstractSamplerGui implements Constants, Chang
 	}
 
 	private void pressChooseFileButton(ActionEvent e) {
-		chooserFile.setFileFilter(new FileNameExtensionFilter("Text file", "txt"));
+		chooserFile.setFileFilter(new FileNameExtensionFilter("Text file", "txt", "csv"));
 		int returnVal = chooserFile.showOpenDialog(null);
 		if(returnVal == JFileChooser.APPROVE_OPTION) {
 			filePath.setText(chooserFile.getSelectedFile().getAbsolutePath());

@@ -31,8 +31,8 @@ import net.xmeter.samplers.AbstractMQTTSampler;
 import net.xmeter.samplers.mqtt.MQTT;
 
 public class CommonConnUI implements ChangeListener, ActionListener, Constants{
-	private final JLabeledTextField serverAddr = new JLabeledTextField("Server name or IP:");
-	private final JLabeledTextField serverPort = new JLabeledTextField("Port number:", 5);
+	private final JLabeledTextField serverAddr = new JLabeledTextField("Server name(s) or IP(s):");
+	private final JLabeledTextField serverPort = new JLabeledTextField("Port number(s):", 10);
 	private JLabeledChoice mqttVersion = new JLabeledChoice("MQTT version:", new String[] { MQTT_VERSION_3_1, MQTT_VERSION_3_1_1 }, false, false);;
 	private final JLabeledTextField timeout = new JLabeledTextField("Timeout(s):", 5);
 	
@@ -74,7 +74,9 @@ public class CommonConnUI implements ChangeListener, ActionListener, Constants{
 		JPanel connPanel = new HorizontalPanel();
 		connPanel.setBorder(BorderFactory.createTitledBorder(BorderFactory.createEtchedBorder(), "MQTT connection"));
 		connPanel.add(serverAddr);
+		serverAddr.setToolTipText("A list of server names or IPs, comma-separated.");
 		connPanel.add(serverPort);
+		serverPort.setToolTipText("A list of corresponding port, comma-separated.");
 		connPanel.add(mqttVersion);
 		
 		JPanel timeoutPannel = new HorizontalPanel();

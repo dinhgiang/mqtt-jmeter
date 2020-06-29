@@ -27,8 +27,24 @@ public class ConnectSampler extends AbstractMQTTSampler {
 	@Override
 	public SampleResult sample(Entry entry) {
 		SampleResult result = new SampleResult();
+		final String serverAddrs= getServer();
+		final String[] paraAddrs = serverAddrs.trim().split("\\s*,\\s*");
+		final String serverPorts= getPort();
+		final String[] paraPorts = serverPorts.trim().split("\\s*,\\s*");
+
+		for (int i = 0; i < paraAddrs.length; i++) {
+			setServer(paraAddrs[i]);
+			setPort(paraPorts[i]);
+//			System.out.println(paraAddrs[i] + " " + paraPorts[i]);
+			result = connect();
+		}
+		return result;
+	}
+
+	private SampleResult connect() {
+		SampleResult result = new SampleResult();
 		result.setSampleLabel(getName());
-		
+
 		JMeterVariables vars = JMeterContextService.getContext().getVariables();
 		connection = (MQTTConnection) vars.getObject("conn");
 		if (connection != null) {
@@ -83,7 +99,7 @@ public class ConnectSampler extends AbstractMQTTSampler {
 			result.setResponseCode("502");
 			return result;
 		}
-		
+
 		try {
 			client = MQTT.getInstance(getMqttClientName()).createClient(parameters);
 
@@ -114,8 +130,7 @@ public class ConnectSampler extends AbstractMQTTSampler {
 			result.setResponseData(MessageFormat.format("Client [{0}] failed with exception.", client.getClientId()).getBytes());
 			result.setResponseCode("502");
 		}
-		
+
 		return result;
 	}
-
 }
