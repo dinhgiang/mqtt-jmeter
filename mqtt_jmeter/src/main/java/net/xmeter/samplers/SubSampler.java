@@ -2,16 +2,18 @@ package net.xmeter.samplers;
 
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.nio.charset.Charset;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.text.MessageFormat;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Scanner;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import org.apache.commons.lang.ArrayUtils;
 import org.apache.jmeter.samplers.Entry;
 import org.apache.jmeter.samplers.SampleResult;
 import org.apache.jmeter.threads.JMeterContextService;
@@ -228,26 +230,31 @@ public class SubSampler extends AbstractMQTTSampler {
             qos = QOS_0;
         }
 
-        for(int i = 0; i < paraTopics.length; i++) {
-            try {
-                File myObj = new File("topic-alias.txt");
-                Scanner myReader = new Scanner(myObj);
-                while (myReader.hasNextLine()) {
-                    String data = myReader.nextLine();
-                    if (paraTopics[i].equals(data)) {
-                        desParaTopics[i] = myReader.nextLine();
-                    } else {
-                        desParaTopics[i] = paraTopics[i];
-                    }
-                }
-                myReader.close();
-            } catch (FileNotFoundException e) {
-                e.printStackTrace();
+        String [] configAlias = new String[20];
+        try {
+            int i = 0;
+            File myObj = new File("topicalias.txt");
+            Scanner myReader = new Scanner(myObj);
+            while (myReader.hasNextLine()) {
+                String data = myReader.nextLine();
+                configAlias[i] = data;
+                i++;
+            }
+            myReader.close();
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        }
+
+        for (int i = 0; i < paraTopics.length; i++) {
+            if (!Arrays.asList(configAlias).contains(paraTopics[i])){
+                desParaTopics[i] = paraTopics[i];
+            } else {
+                desParaTopics[i] = configAlias[Arrays.asList(configAlias).indexOf(paraTopics[i]) + 1];
             }
         }
 
-        connection.subscribe(paraTopics, MQTTQoS.fromValue(qos), () -> {
-            logger.fine(() -> "sub successful, topic length is " + paraTopics.length);
+        connection.subscribe(desParaTopics, MQTTQoS.fromValue(qos), () -> {
+            logger.fine(() -> "sub successful, topic length is " + desParaTopics.length);
         }, error -> {
             logger.log(Level.INFO, "subscribe failed", error);
             subFailed = true;
